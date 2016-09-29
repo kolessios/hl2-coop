@@ -228,6 +228,9 @@ CBasePlayer *UTIL_PlayerBySteamID( const CSteamID &steamID );
 // and you want the player.
 // not useable in multiplayer - see UTIL_GetListenServerHost()
 CBasePlayer* UTIL_GetLocalPlayer( void );
+CBasePlayer* UTIL_GetMainPlayer();
+CBasePlayer* UTIL_GetIdealPlayer();
+CBasePlayer* UTIL_GetRandomPlayer();
 
 // get the local player on a listen server
 CBasePlayer *UTIL_GetListenServerHost( void );

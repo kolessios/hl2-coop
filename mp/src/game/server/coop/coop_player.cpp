@@ -9,6 +9,8 @@
 #include "soundent.h"
 #include "predicted_viewmodel.h"
 
+#include "ai_basenpc.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -16,7 +18,7 @@
 // Comandos
 //================================================================================
 
-ConVar coop_respawn_time("coop_respawn_time", "3", FCVAR_REPLICATED | FCVAR_NOTIFY);
+ConVar coop_respawn_time("coop_respawn_time", "6", FCVAR_REPLICATED | FCVAR_NOTIFY);
 
 //================================================================================
 // Información y Red
@@ -28,20 +30,20 @@ PRECACHE_REGISTER( player );
 // Local Players
 BEGIN_SEND_TABLE_NOBASE( CCoopPlayer, DT_CoopLocalPlayerExclusive )
     // send a hi-res origin to the local player for use in prediction
-    //SendPropVector( SENDINFO(m_vecOrigin), -1,  SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
+    SendPropVector( SENDINFO(m_vecOrigin), -1,  SPROP_NOSCALE|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
 END_SEND_TABLE()
 
 // Other Players
 BEGIN_SEND_TABLE_NOBASE( CCoopPlayer, DT_CoopNonLocalPlayerExclusive )
     // send a low-res origin to other players
-    //SendPropVector( SENDINFO(m_vecOrigin), -1,  SPROP_COORD_MP_LOWPRECISION|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
+    SendPropVector( SENDINFO(m_vecOrigin), -1,  SPROP_COORD_MP_LOWPRECISION|SPROP_CHANGES_OFTEN, 0.0f, HIGH_DEFAULT, SendProxy_Origin ),
 END_SEND_TABLE()
 
 IMPLEMENT_SERVERCLASS_ST( CCoopPlayer, DT_CoopPlayer )
     // Excluimos el envio de información del sistema de animaciones.
     // Este será procesado en el cliente por el [AnimationSystem] 
     //SendPropExclude( "DT_BaseEntity", "m_angRotation" ),
-    //SendPropExclude( "DT_BaseEntity", "m_vecOrigin" ),
+    SendPropExclude( "DT_BaseEntity", "m_vecOrigin" ),
     SendPropExclude( "DT_BaseAnimating", "m_flPoseParameter" ),
     SendPropExclude( "DT_BaseAnimating", "m_flPlaybackRate" ),    
     SendPropExclude( "DT_BaseAnimating", "m_nSequence" ),    
@@ -79,6 +81,7 @@ CCoopPlayer::CCoopPlayer()
 
     // Iniciamos la variable
     m_angEyeAngles.Init();
+    m_vecDeathPosition.Invalidate();
 }
 
 //================================================================================
@@ -103,8 +106,6 @@ void CCoopPlayer::Spawn()
     // Modelo del Jugador
     SetModel( GetPlayerModel() );
 
-    //CreateViewModel(0);
-
     // Propiedes fisicas
     RemoveSolidFlags( FSOLID_NOT_SOLID );
 
@@ -117,6 +118,9 @@ void CCoopPlayer::Spawn()
     // Estamos en el suelo
     AddFlag( FL_ONGROUND );
 
+    // Hemos muerto, usamos la función de reaparecer
+    Respawn();
+
     m_nRenderFX             = kRenderNormal;
     m_Local.m_iHideHUD      = 0;
     m_iSpawnInterpCounter   = (m_iSpawnInterpCounter + 1) % 8;
@@ -127,9 +131,86 @@ void CCoopPlayer::Spawn()
 
 //================================================================================
 //================================================================================
+void CCoopPlayer::GiveAll( bool bWeapons ) 
+{
+    m_bSpawning = true;
+
+    if ( bWeapons )
+    {
+        EquipSuit();
+
+        GiveNamedItem( "weapon_smg1" );
+	    GiveNamedItem( "weapon_frag" );
+	    GiveNamedItem( "weapon_crowbar" );
+	    GiveNamedItem( "weapon_pistol" );
+	    GiveNamedItem( "weapon_ar2" );
+	    GiveNamedItem( "weapon_shotgun" );
+	    GiveNamedItem( "weapon_physcannon" );
+	    GiveNamedItem( "weapon_bugbait" );
+	    GiveNamedItem( "weapon_rpg" );
+	    GiveNamedItem( "weapon_357" );
+	    GiveNamedItem( "weapon_crossbow" );
+    }
+
+    GiveAmmo( 255,	"Pistol");
+	GiveAmmo( 255,	"AR2");
+	GiveAmmo( 5,	"AR2AltFire");
+	GiveAmmo( 255,	"SMG1");
+	GiveAmmo( 255,	"Buckshot");
+	GiveAmmo( 3,	"smg1_grenade");
+	GiveAmmo( 3,	"rpg_round");
+	GiveAmmo( 5,	"grenade");
+	GiveAmmo( 32,	"357" );
+	GiveAmmo( 16,	"XBowBolt" );
+
+    m_bSpawning = false;
+}
+
+//================================================================================
+//================================================================================
 CBaseEntity *CCoopPlayer::Respawn() 
 {
-    Spawn();
+    Vector vecSpawnSpot;
+
+    // Buscamos un lugar cerca de algún amigo
+	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	{
+		CBasePlayer	*pPlayer = UTIL_PlayerByIndex( i );
+
+        if ( !pPlayer )
+            continue;
+
+        if ( !pPlayer->IsAlive() )
+            continue;
+
+        if ( pPlayer == this )
+            continue;
+
+        // Nos hacemos TP a nuestro amigo
+        if ( CAI_BaseNPC::FindSpotForNPCInRadius(&vecSpawnSpot, pPlayer->GetAbsOrigin(), this, 250.0f, false) )
+        {
+            GiveAll();
+            Teleport( &vecSpawnSpot, NULL, NULL );
+
+            return NULL;
+        }
+    }    
+
+    // No hay amigos :(
+    // Nos hacemos tp a nuestra última posición
+    if ( m_vecDeathPosition.IsValid() )
+    {
+        if ( CAI_BaseNPC::FindSpotForNPCInRadius(&vecSpawnSpot, m_vecDeathPosition, this, 250.0f, false) )
+        {
+            GiveAll();
+            Teleport( &vecSpawnSpot, NULL, NULL );
+
+            return NULL;
+        }
+    }
+
+    // PRIMER SPAWN
+    GiveAll( false );
     return NULL;
 }
 
@@ -248,10 +329,146 @@ void CCoopPlayer::CreateViewModel( int index )
 
 //================================================================================
 //================================================================================
+int CCoopPlayer::GiveAmmo( int iCount, const char *szName, bool bSuppressSound ) 
+{
+    int result = CBasePlayer::GiveAmmo( iCount, szName, bSuppressSound );
+    //DevMsg("CCoopPlayer::GiveAmmo\n");
+
+    if ( result > 0 && !m_bSpawning ) 
+    {
+        // Also include all players
+	    for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	    {
+		    CCoopPlayer	*pPlayer = (CCoopPlayer *)UTIL_PlayerByIndex( i );
+
+		    if ( !pPlayer )
+			    continue;
+
+            if ( !pPlayer->IsAlive() )
+			    continue;
+
+            if ( pPlayer == this )
+                continue;
+
+            pPlayer->CBasePlayer::GiveAmmo( iCount, szName, bSuppressSound );
+        }
+    }
+    
+    return result;
+}
+
+//================================================================================
+//================================================================================
+CBaseEntity *CCoopPlayer::GiveNamedItem( const char *szName, int iSubType ) 
+{
+    CBaseEntity *pItem = BaseClass::GiveNamedItem( szName, iSubType );
+    //DevMsg("CCoopPlayer::GiveNamedItem\n");
+
+    if ( pItem && !m_bSpawning )
+    {
+        // Also include all players
+	    for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	    {
+		    CCoopPlayer	*pPlayer = (CCoopPlayer *)UTIL_PlayerByIndex( i );
+
+		    if ( !pPlayer )
+			    continue;
+
+            if ( !pPlayer->IsAlive() )
+			    continue;
+
+            if ( pPlayer == this )
+                continue;
+
+            pPlayer->BaseClass::GiveNamedItem( szName, iSubType );
+        }
+    }
+
+    return pItem;
+}
+
+//================================================================================
+//================================================================================
+int CCoopPlayer::TakeHealth( float flHealth, int bitsDamageType ) 
+{
+    int result = BaseClass::TakeHealth( flHealth, bitsDamageType );
+    //DevMsg("CCoopPlayer::TakeHealth\n");
+
+    if ( result > 0 && !m_bSpawning )
+    {
+        // Also include all players
+	    for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	    {
+		    CCoopPlayer	*pPlayer = (CCoopPlayer *)UTIL_PlayerByIndex( i );
+
+		    if ( !pPlayer )
+			    continue;
+
+            if ( !pPlayer->IsAlive() )
+			    continue;
+
+            if ( pPlayer == this )
+                continue;
+
+            pPlayer->BaseClass::TakeHealth( flHealth, bitsDamageType );
+        }
+    }
+
+    return result;
+}
+
+//================================================================================
+//================================================================================
+bool CCoopPlayer::ApplyBattery( float powerMultiplier ) 
+{
+    bool result = BaseClass::ApplyBattery( powerMultiplier );
+
+    if ( result && !m_bSpawning )
+    {
+        // Also include all players
+	    for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	    {
+		    CCoopPlayer	*pPlayer = (CCoopPlayer *)UTIL_PlayerByIndex( i );
+
+		    if ( !pPlayer )
+			    continue;
+
+            if ( !pPlayer->IsAlive() )
+			    continue;
+
+            if ( pPlayer == this )
+                continue;
+
+            pPlayer->BaseClass::ApplyBattery( powerMultiplier );
+        }
+    }
+
+    return result;
+}
+
+//================================================================================
+//================================================================================
 void CCoopPlayer::Event_Killed( const CTakeDamageInfo & info ) 
 {
     CSound *pSound              = CSoundEnt::SoundPointerForIndex( CSoundEnt::ClientSoundIndex(edict()) );
     IPhysicsObject *pObject     = VPhysicsGetObject();
+
+    // Guardamos la posición
+    m_vecDeathPosition = GetAbsOrigin();
+
+    // Le damos vida a nuestros amigos para que aguanten
+    for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	{
+		CBasePlayer	*pPlayer = UTIL_PlayerByIndex( i );
+
+        if ( !pPlayer )
+            continue;
+
+        if ( !pPlayer->IsAlive() )
+            continue;
+
+        pPlayer->TakeHealth( 50, DMG_GENERIC );
+    }
 
     // Aragghhhhhh!....
     DeathSound( info );
@@ -402,7 +619,7 @@ void CCoopPlayer::PlayerDeathPostThink()
     if ( gpGlobals->curtime >= (GetDeathTime() + coop_respawn_time.GetFloat()) ) 
     {
         SetNextThink( TICK_NEVER_THINK );
-        Respawn();
+        Spawn();
     }
 }
 
@@ -624,9 +841,15 @@ bool CCoopPlayer::ClientCommand( const CCommand &args )
     if ( FStrEq(args[0], "respawn") ) 
     {
         if ( IsAlive() )
-            CommitSuicide();
+        {
+            GiveAll();
+            Respawn();
+        }
+        else
+        {
+            Spawn();
+        }
 
-        Respawn();
         return true;
     }
 

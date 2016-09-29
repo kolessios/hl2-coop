@@ -197,8 +197,8 @@ public:
 
 	void InputOutsideTransition( inputdata_t &inputdata )
 	{
-		if ( !AI_IsSinglePlayer() )
-			return;
+		//if ( !AI_IsSinglePlayer() )
+			//return;
 
 		m_bNotInTransition = true;
 
@@ -214,7 +214,7 @@ public:
 					bool bHadGag = pAllyNpc->HasSpawnFlags(SF_NPC_GAG);
 
 					pAllyNpc->AddSpawnFlags(SF_NPC_GAG);
-					pAllyNpc->TargetOrder( UTIL_GetLocalPlayer(), &pAllyNpc, 1 );
+					pAllyNpc->TargetOrder( UTIL_GetMainPlayer(), &pAllyNpc, 1 );
 					if ( !bHadGag )
 						pAllyNpc->RemoveSpawnFlags(SF_NPC_GAG);
 				}
@@ -932,52 +932,61 @@ void CNPC_Citizen::GatherConditions()
 	// assume the player is 'staring' and wants health.
 	if( CanHeal() )
 	{
-		CBasePlayer *pPlayer = AI_GetSinglePlayer();
-
-		if ( !pPlayer )
+        if ( !UTIL_GetMainPlayer() )
 		{
 			m_flTimePlayerStare = FLT_MAX;
 			return;
 		}
 
-		float flDistSqr = ( GetAbsOrigin() - pPlayer->GetAbsOrigin() ).Length2DSqr();
-		float flStareDist = sk_citizen_player_stare_dist.GetFloat();
-		float flPlayerDamage = pPlayer->GetMaxHealth() - pPlayer->GetHealth();
+		for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	    {
+		    CBasePlayer *pPlayer = UTIL_PlayerByIndex( i );
 
-		if( pPlayer->IsAlive() && flPlayerDamage > 0 && (flDistSqr <= flStareDist * flStareDist) && pPlayer->FInViewCone( this ) && pPlayer->FVisible( this ) )
-		{
-			if( m_flTimePlayerStare == FLT_MAX )
-			{
-				// Player wasn't looking at me at last think. He started staring now.
-				m_flTimePlayerStare = gpGlobals->curtime;
-			}
+		    if ( !pPlayer )
+			    continue;
 
-			// Heal if it's been long enough since last time I healed a staring player.
-			if( gpGlobals->curtime - m_flTimePlayerStare >= sk_citizen_player_stare_time.GetFloat() && gpGlobals->curtime > m_flTimeNextHealStare && !IsCurSchedule( SCHED_CITIZEN_HEAL ) )
-			{
-				if ( ShouldHealTarget( pPlayer, true ) )
-				{
-					SetCondition( COND_CIT_PLAYERHEALREQUEST );
-				}
-				else
-				{
-					m_flTimeNextHealStare = gpGlobals->curtime + sk_citizen_stare_heal_time.GetFloat() * .5f;
-					ClearCondition( COND_CIT_PLAYERHEALREQUEST );
-				}
-			}
+            if ( !pPlayer->IsAlive() )
+			    continue;
 
-#ifdef HL2_EPISODIC
-			// Heal if I'm on an assault. The player hasn't had time to stare at me.
-			if( m_AssaultBehavior.IsRunning() && IsMoving() )
-			{
-				SetCondition( COND_CIT_PLAYERHEALREQUEST );
-			}
-#endif
-		}
-		else
-		{
-			m_flTimePlayerStare = FLT_MAX;
-		}
+		    float flDistSqr = ( GetAbsOrigin() - pPlayer->GetAbsOrigin() ).Length2DSqr();
+		    float flStareDist = sk_citizen_player_stare_dist.GetFloat();
+		    float flPlayerDamage = pPlayer->GetMaxHealth() - pPlayer->GetHealth();
+
+		    if( pPlayer->IsAlive() && flPlayerDamage > 0 && (flDistSqr <= flStareDist * flStareDist) && pPlayer->FInViewCone( this ) && pPlayer->FVisible( this ) )
+		    {
+			    if( m_flTimePlayerStare == FLT_MAX )
+			    {
+				    // Player wasn't looking at me at last think. He started staring now.
+				    m_flTimePlayerStare = gpGlobals->curtime;
+			    }
+
+			    // Heal if it's been long enough since last time I healed a staring player.
+			    if( gpGlobals->curtime - m_flTimePlayerStare >= sk_citizen_player_stare_time.GetFloat() && gpGlobals->curtime > m_flTimeNextHealStare && !IsCurSchedule( SCHED_CITIZEN_HEAL ) )
+			    {
+				    if ( ShouldHealTarget( pPlayer, true ) )
+				    {
+					    SetCondition( COND_CIT_PLAYERHEALREQUEST );
+				    }
+				    else
+				    {
+					    m_flTimeNextHealStare = gpGlobals->curtime + sk_citizen_stare_heal_time.GetFloat() * .5f;
+					    ClearCondition( COND_CIT_PLAYERHEALREQUEST );
+				    }
+			    }
+
+    #ifdef HL2_EPISODIC
+			    // Heal if I'm on an assault. The player hasn't had time to stare at me.
+			    if( m_AssaultBehavior.IsRunning() && IsMoving() )
+			    {
+				    SetCondition( COND_CIT_PLAYERHEALREQUEST );
+			    }
+    #endif
+		    }
+		    else
+		    {
+			    m_flTimePlayerStare = FLT_MAX;
+		    }
+        }
 	}
 }
 
@@ -985,8 +994,8 @@ void CNPC_Citizen::GatherConditions()
 //-----------------------------------------------------------------------------
 void CNPC_Citizen::PredictPlayerPush()
 {
-	if ( !AI_IsSinglePlayer() )
-		return;
+	//if ( !AI_IsSinglePlayer() )
+		//return;
 
 	if ( HasCondition( COND_CIT_PLAYERHEALREQUEST ) )
 		return;
@@ -995,16 +1004,24 @@ void CNPC_Citizen::PredictPlayerPush()
 
 	BaseClass::PredictPlayerPush();
 
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
-	if ( !bHadPlayerPush && HasCondition( COND_PLAYER_PUSHING ) && 
-		 pPlayer->FInViewCone( this ) && CanHeal() )
+    // Also include all players
+	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 	{
-		if ( ShouldHealTarget( pPlayer, true ) )
-		{
-			ClearCondition( COND_PLAYER_PUSHING );
-			SetCondition( COND_CIT_PLAYERHEALREQUEST );
-		}
-	}
+		CBasePlayer	*pPlayer = UTIL_PlayerByIndex( i );
+	    
+        if ( !pPlayer )
+            continue;
+
+	    if ( !bHadPlayerPush && HasCondition( COND_PLAYER_PUSHING ) && 
+		     pPlayer->FInViewCone( this ) && CanHeal() )
+	    {
+		    if ( ShouldHealTarget( pPlayer, true ) )
+		    {
+			    ClearCondition( COND_PLAYER_PUSHING );
+			    SetCondition( COND_CIT_PLAYERHEALREQUEST );
+		    }
+	    }
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -1442,11 +1459,11 @@ bool CNPC_Citizen::ShouldDeferToFollowBehavior()
 //-----------------------------------------------------------------------------
 int CNPC_Citizen::TranslateSchedule( int scheduleType ) 
 {
-	CBasePlayer *pLocalPlayer = AI_GetSinglePlayer();
+	//CBasePlayer *pLocalPlayer = AI_GetSinglePlayer();
 
 	switch( scheduleType )
 	{
-	case SCHED_IDLE_STAND:
+	/*case SCHED_IDLE_STAND:
 	case SCHED_ALERT_STAND:
 		if( m_NPCState != NPC_STATE_COMBAT && pLocalPlayer && !pLocalPlayer->IsAlive() && CanJoinPlayerSquad() )
 		{
@@ -1460,7 +1477,7 @@ int CNPC_Citizen::TranslateSchedule( int scheduleType )
 				return SCHED_CITIZEN_MOURN_PLAYER;
 			}
 		}
-		break;
+		break;*/
 
 	case SCHED_ESTABLISH_LINE_OF_FIRE:
 	case SCHED_MOVE_TO_WEAPON_RANGE:
@@ -2321,8 +2338,8 @@ bool CNPC_Citizen::IsPlayerAlly( CBasePlayer *pPlayer )
 //-----------------------------------------------------------------------------
 bool CNPC_Citizen::CanJoinPlayerSquad()
 {
-	if ( !AI_IsSinglePlayer() )
-		return false;
+	//if ( !AI_IsSinglePlayer() )
+		//return false;
 
 	if ( m_NPCState == NPC_STATE_SCRIPT || m_NPCState == NPC_STATE_PRONE )
 		return false;
@@ -2337,8 +2354,8 @@ bool CNPC_Citizen::CanJoinPlayerSquad()
 	if ( !CanBeUsedAsAFriend() )
 		return false;
 
-	if ( IRelationType( UTIL_GetLocalPlayer() ) != D_LI )
-		return false;
+	//if ( IRelationType( UTIL_GetLocalPlayer() ) != D_LI )
+		//return false;
 
 	return true;
 }
@@ -2364,9 +2381,9 @@ bool CNPC_Citizen::HaveCommandGoal() const
 //-----------------------------------------------------------------------------
 bool CNPC_Citizen::IsCommandMoving()
 {
-	if ( AI_IsSinglePlayer() && IsInPlayerSquad() )
+	if ( /*AI_IsSinglePlayer() &&*/ IsInPlayerSquad() )
 	{
-		if ( m_FollowBehavior.GetFollowTarget() == UTIL_GetLocalPlayer() ||
+		if ( m_FollowBehavior.GetFollowTarget() && m_FollowBehavior.GetFollowTarget()->IsPlayer() ||
 			 IsFollowingCommandPoint() )
 		{
 			return ( m_FollowBehavior.IsMovingToFollowTarget() );
@@ -2379,10 +2396,10 @@ bool CNPC_Citizen::IsCommandMoving()
 //-----------------------------------------------------------------------------
 bool CNPC_Citizen::ShouldAutoSummon()
 {
-	if ( !AI_IsSinglePlayer() || !IsFollowingCommandPoint() || !IsInPlayerSquad() )
+	if ( /*!AI_IsSinglePlayer() ||*/ !IsFollowingCommandPoint() || !IsInPlayerSquad() )
 		return false;
 
-	CHL2_Player *pPlayer = (CHL2_Player *)UTIL_GetLocalPlayer();
+	CHL2_Player *pPlayer = (CHL2_Player *)UTIL_GetIdealPlayer();
 	
 	float distMovedSq = ( pPlayer->GetAbsOrigin() - m_vAutoSummonAnchor ).LengthSqr();
 	float moveTolerance = player_squad_autosummon_move_tolerance.GetFloat() * 12;
@@ -2510,7 +2527,7 @@ bool CNPC_Citizen::SpeakCommandResponse( AIConcept_t concept, const char *modifi
 						   CFmtStr( "numselected:%d,"
 									"useradio:%d%s",
 									( GetSquad() ) ? GetSquad()->NumMembers() : 1,
-									ShouldSpeakRadio( AI_GetSinglePlayer() ),
+									ShouldSpeakRadio( UTIL_GetIdealPlayer() ),
 									( modifiers ) ? CFmtStr(",%s", modifiers).operator const char *() : "" ) );
 }
 
@@ -2553,8 +2570,8 @@ bool CNPC_Citizen::TargetOrder( CBaseEntity *pTarget, CAI_BaseNPC **Allies, int 
 //-----------------------------------------------------------------------------
 void CNPC_Citizen::MoveOrder( const Vector &vecDest, CAI_BaseNPC **Allies, int numAllies )
 {
-	if ( !AI_IsSinglePlayer() )
-		return;
+	//if ( !AI_IsSinglePlayer() )
+		//return;
 
 	if( hl2_episodic.GetBool() && m_iszDenyCommandConcept != NULL_STRING )
 	{
@@ -2562,7 +2579,7 @@ void CNPC_Citizen::MoveOrder( const Vector &vecDest, CAI_BaseNPC **Allies, int n
 		return;
 	}
 
-	CHL2_Player *pPlayer = (CHL2_Player *)UTIL_GetLocalPlayer();
+	CHL2_Player *pPlayer = (CHL2_Player *)UTIL_GetIdealPlayer();
 
 	m_AutoSummonTimer.Set( player_squad_autosummon_time.GetFloat() );
 	m_vAutoSummonAnchor = pPlayer->GetAbsOrigin();
@@ -2646,13 +2663,13 @@ void CNPC_Citizen::CommanderUse( CBaseEntity *pActivator, CBaseEntity *pCaller, 
 
 	// Under these conditions, citizens will refuse to go with the player.
 	// Robin: NPCs should always respond to +USE even if someone else has the semaphore.
-	if ( !AI_IsSinglePlayer() || !CanJoinPlayerSquad() )
+	if ( !CanJoinPlayerSquad() )
 	{
 		SimpleUse( pActivator, pCaller, useType, value );
 		return;
 	}
 	
-	if ( pActivator == UTIL_GetLocalPlayer() )
+	if ( pActivator->IsPlayer() )
 	{
 		// Don't say hi after you've been addressed by the player
 		SetSpokeConcept( TLK_HELLO, NULL );	
@@ -2791,10 +2808,13 @@ struct SquadCandidate_t
 
 void CNPC_Citizen::UpdatePlayerSquad()
 {
-	if ( !AI_IsSinglePlayer() )
-		return;
+	//if ( !AI_IsSinglePlayer() )
+		//return;
 
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	CBasePlayer *pPlayer = UTIL_GetIdealPlayer();
+    if ( !pPlayer )
+        return;
+
 	if ( ( pPlayer->GetAbsOrigin().AsVector2D() - GetAbsOrigin().AsVector2D() ).LengthSqr() < Square(20*12) )
 		m_flTimeLastCloseToPlayer = gpGlobals->curtime;
 
@@ -3073,8 +3093,8 @@ int CNPC_Citizen::PlayerSquadCandidateSortFunc( const SquadCandidate_t *pLeft, c
 //-----------------------------------------------------------------------------
 void CNPC_Citizen::FixupPlayerSquad()
 {
-	if ( !AI_IsSinglePlayer() )
-		return;
+	//if ( !AI_IsSinglePlayer() )
+		//return;
 
 	m_flTimeJoinedPlayerSquad = gpGlobals->curtime;
 	m_bWasInPlayerSquad = true;
@@ -3134,7 +3154,7 @@ void CNPC_Citizen::FixupPlayerSquad()
 	}
 	else
 	{
-		m_FollowBehavior.SetFollowTarget( UTIL_GetLocalPlayer() );
+		m_FollowBehavior.SetFollowTarget( UTIL_GetRandomPlayer() );
 		m_FollowBehavior.SetParameters( AIF_SIMPLE );
 	}
 }
@@ -3151,8 +3171,8 @@ void CNPC_Citizen::ClearFollowTarget()
 //-----------------------------------------------------------------------------
 void CNPC_Citizen::UpdateFollowCommandPoint()
 {
-	if ( !AI_IsSinglePlayer() )
-		return;
+	//if ( !AI_IsSinglePlayer() )
+		//return;
 
 	if ( IsInPlayerSquad() )
 	{
@@ -3183,10 +3203,10 @@ void CNPC_Citizen::UpdateFollowCommandPoint()
 		{
 			if ( IsFollowingCommandPoint() )
 				ClearFollowTarget();
-			if ( m_FollowBehavior.GetFollowTarget() != UTIL_GetLocalPlayer() )
+			if ( !m_FollowBehavior.GetFollowTarget() || !m_FollowBehavior.GetFollowTarget()->IsPlayer() )
 			{
 				DevMsg( "Expected to be following player, but not\n" );
-				m_FollowBehavior.SetFollowTarget( UTIL_GetLocalPlayer() );
+				m_FollowBehavior.SetFollowTarget( UTIL_GetRandomPlayer() );
 				m_FollowBehavior.SetParameters( AIF_SIMPLE );
 			}
 		}
@@ -3231,8 +3251,8 @@ int __cdecl SquadSortFunc( const SquadMemberInfo_t *pLeft, const SquadMemberInfo
 
 CAI_BaseNPC *CNPC_Citizen::GetSquadCommandRepresentative()
 {
-	if ( !AI_IsSinglePlayer() )
-		return NULL;
+	//if ( !AI_IsSinglePlayer() )
+		//return NULL;
 
 	if ( IsInPlayerSquad() )
 	{
@@ -3245,7 +3265,7 @@ CAI_BaseNPC *CNPC_Citizen::GetSquadCommandRepresentative()
 			hCurrent = NULL;
 
 			CUtlVectorFixed<SquadMemberInfo_t, MAX_SQUAD_MEMBERS> candidates;
-			CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+			CBasePlayer *pPlayer = UTIL_GetIdealPlayer();
 
 			if ( pPlayer )
 			{
@@ -3754,7 +3774,7 @@ bool CNPC_Citizen::ShouldLookForHealthItem()
 		return false;
 
 	// Player is hurt, don't steal his health.
-	if( AI_IsSinglePlayer() && UTIL_GetLocalPlayer()->GetHealth() <= UTIL_GetLocalPlayer()->GetHealth() * 0.75f )
+    //if( AI_IsSinglePlayer() && UTIL_GetLocalPlayer()->GetHealth() <= UTIL_GetLocalPlayer()->GetHealth() * 0.75f )
 		return false;
 
 	// Wait till you're standing still.

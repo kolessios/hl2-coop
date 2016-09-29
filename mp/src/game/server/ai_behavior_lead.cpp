@@ -148,9 +148,9 @@ void CAI_LeadBehavior::LeadPlayer( const AI_LeadArgs_t &leadArgs, CAI_LeadBehavi
 {
 #ifndef CSTRIKE_DLL
 	CAI_PlayerAlly *pOuter = dynamic_cast<CAI_PlayerAlly*>(GetOuter());
-	if ( pOuter && AI_IsSinglePlayer() )
+	if ( pOuter /*&& AI_IsSinglePlayer()*/ )
 	{
-		pOuter->SetSpeechTarget( UTIL_GetLocalPlayer() );
+		pOuter->SetSpeechTarget( UTIL_GetIdealPlayer() );
 	}
 #endif
 
@@ -179,8 +179,8 @@ void CAI_LeadBehavior::StopLeading( void )
 
 bool CAI_LeadBehavior::CanSelectSchedule()
 {
- 	if ( !AI_GetSinglePlayer() || AI_GetSinglePlayer()->IsDead() )
-		return false;
+ 	//if ( !AI_GetSinglePlayer() || AI_GetSinglePlayer()->IsDead() )
+		//return false;
 
 	bool fAttacked = ( HasCondition( COND_LIGHT_DAMAGE ) || HasCondition( COND_HEAVY_DAMAGE ) );
 	bool fNonCombat = ( GetNpcState() == NPC_STATE_IDLE || GetNpcState() == NPC_STATE_ALERT );
@@ -192,7 +192,7 @@ bool CAI_LeadBehavior::CanSelectSchedule()
 
 void CAI_LeadBehavior::BeginScheduleSelection()
 {
-	SetTarget( AI_GetSinglePlayer() );
+	SetTarget( UTIL_GetIdealPlayer() );
 	CAI_Expresser *pExpresser = GetOuter()->GetExpresser();
 	if ( pExpresser )
 		pExpresser->ClearSpokeConcept( TLK_LEAD_ARRIVAL );
@@ -323,10 +323,13 @@ bool CAI_LeadBehavior::PlayerIsAheadOfMe( bool bForce )
 	if ( !m_bInitialAheadTest && !IsCurSchedule( SCHED_LEAD_PLAYER, false ) && !bForce )
 		return false;
 
+    if ( !UTIL_GetIdealPlayer() )
+        return false;
+
 	m_bInitialAheadTest = false;
 
 	Vector vecClosestPoint;
-	if ( GetClosestPointOnRoute( AI_GetSinglePlayer()->GetAbsOrigin(), &vecClosestPoint ) )
+	if ( GetClosestPointOnRoute( UTIL_GetIdealPlayer()->GetAbsOrigin(), &vecClosestPoint ) )
 	{
 		// If the closest point is not right next to me, then 
 		// the player is somewhere ahead of me on the route.
@@ -353,7 +356,7 @@ void CAI_LeadBehavior::GatherConditions( void )
 		}
 
 		// We have to collect data about the person we're leading around.
-		CBaseEntity *pFollower = AI_GetSinglePlayer();
+		CBaseEntity *pFollower = UTIL_GetIdealPlayer();
 
 		if( pFollower )
 		{

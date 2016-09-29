@@ -340,54 +340,58 @@ void CNPC_Dog::SetPlayerAvoidState( void )
 		physfollower_t *pBone;
 		int i;
 
-		CBasePlayer *pLocalPlayer = AI_GetSinglePlayer();
+        // Also include all players
+	    for ( int p = 1; p <= gpGlobals->maxClients; p++ )
+	    {
+		    CBasePlayer *pLocalPlayer = UTIL_PlayerByIndex(p);
 
-		if ( pLocalPlayer )
-		{
-			vWorldMins = WorldAlignMins();
-			vWorldMaxs = WorldAlignMaxs();
+		    if ( pLocalPlayer )
+		    {
+			    vWorldMins = WorldAlignMins();
+			    vWorldMaxs = WorldAlignMaxs();
 
-			vPlayerMins = pLocalPlayer->GetAbsOrigin() + pLocalPlayer->WorldAlignMins();
-			vPlayerMaxs = pLocalPlayer->GetAbsOrigin() + pLocalPlayer->WorldAlignMaxs();
+			    vPlayerMins = pLocalPlayer->GetAbsOrigin() + pLocalPlayer->WorldAlignMins();
+			    vPlayerMaxs = pLocalPlayer->GetAbsOrigin() + pLocalPlayer->WorldAlignMaxs();
 
-			// check if the player intersects the bounds of any of the bone followers
-			for ( i = 0; i < m_BoneFollowerManager.GetNumBoneFollowers(); i++ )
-			{
-				pBone = m_BoneFollowerManager.GetBoneFollower( i );
-				if ( pBone && pBone->hFollower )
-				{
-					pBone->hFollower->CollisionProp()->WorldSpaceSurroundingBounds( &vMins, &vMaxs );
-					if ( IsBoxIntersectingBox( vMins, vMaxs, vPlayerMins, vPlayerMaxs ) )
-					{
-						bIntersectingBoneFollowers = true;
-						break;
-					}
-				}
-			}
+			    // check if the player intersects the bounds of any of the bone followers
+			    for ( i = 0; i < m_BoneFollowerManager.GetNumBoneFollowers(); i++ )
+			    {
+				    pBone = m_BoneFollowerManager.GetBoneFollower( i );
+				    if ( pBone && pBone->hFollower )
+				    {
+					    pBone->hFollower->CollisionProp()->WorldSpaceSurroundingBounds( &vMins, &vMaxs );
+					    if ( IsBoxIntersectingBox( vMins, vMaxs, vPlayerMins, vPlayerMaxs ) )
+					    {
+						    bIntersectingBoneFollowers = true;
+						    break;
+					    }
+				    }
+			    }
 
-			bIntersectingNPCBox = IsBoxIntersectingBox( GetAbsOrigin() + vWorldMins, GetAbsOrigin() + vWorldMaxs, vPlayerMins, vPlayerMaxs );
+			    bIntersectingNPCBox = IsBoxIntersectingBox( GetAbsOrigin() + vWorldMins, GetAbsOrigin() + vWorldMaxs, vPlayerMins, vPlayerMaxs );
 
-			if ( ai_debug_avoidancebounds.GetBool() )
-			{
-				int iRed = ( bIntersectingNPCBox == true ) ? 255 : 0;
+			    if ( ai_debug_avoidancebounds.GetBool() )
+			    {
+				    int iRed = ( bIntersectingNPCBox == true ) ? 255 : 0;
 
-				NDebugOverlay::Box( GetAbsOrigin(), vWorldMins, vWorldMaxs, iRed, 0, 255, 64, 0.1 );
+				    NDebugOverlay::Box( GetAbsOrigin(), vWorldMins, vWorldMaxs, iRed, 0, 255, 64, 0.1 );
 
-				// draw the bounds of the bone followers
-				for ( i = 0; i < m_BoneFollowerManager.GetNumBoneFollowers(); i++ )
-				{
-					pBone = m_BoneFollowerManager.GetBoneFollower( i );
-					if ( pBone && pBone->hFollower )
-					{
-						pBone->hFollower->CollisionProp()->WorldSpaceSurroundingBounds( &vMins, &vMaxs );
-						iRed = ( IsBoxIntersectingBox( vMins, vMaxs, vPlayerMins, vPlayerMaxs ) ) ? 255 : 0;
+				    // draw the bounds of the bone followers
+				    for ( i = 0; i < m_BoneFollowerManager.GetNumBoneFollowers(); i++ )
+				    {
+					    pBone = m_BoneFollowerManager.GetBoneFollower( i );
+					    if ( pBone && pBone->hFollower )
+					    {
+						    pBone->hFollower->CollisionProp()->WorldSpaceSurroundingBounds( &vMins, &vMaxs );
+						    iRed = ( IsBoxIntersectingBox( vMins, vMaxs, vPlayerMins, vPlayerMaxs ) ) ? 255 : 0;
 
-						NDebugOverlay::Box( vec3_origin, vMins, vMaxs, iRed, 0, 255, 64, 0.1 );
-					}
-				}
-			}
-		}
-	}
+						    NDebugOverlay::Box( vec3_origin, vMins, vMaxs, iRed, 0, 255, 64, 0.1 );
+					    }
+				    }
+			    }
+		    }
+	    }
+    }
 
 	m_bPlayerAvoidState = ShouldPlayerAvoid();
 	m_bPerformAvoidance = bIntersectingNPCBox || bIntersectingBoneFollowers;

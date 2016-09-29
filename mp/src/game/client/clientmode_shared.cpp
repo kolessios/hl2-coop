@@ -457,6 +457,26 @@ void ClientModeShared::OverrideView( CViewSetup *pSetup )
 		VectorMA( pSetup->origin, cam_ofs_distance[1], camRight, pSetup->origin );
 		VectorMA( pSetup->origin, cam_ofs_distance[2], camUp, pSetup->origin );
 
+        static ConVarRef c_thirdpersonshoulder( "c_thirdpersonshoulder" );
+		if ( c_thirdpersonshoulder.GetBool() )
+		{
+			static ConVarRef c_thirdpersonshoulderoffset( "c_thirdpersonshoulderoffset" );
+			static ConVarRef c_thirdpersonshoulderheight( "c_thirdpersonshoulderheight" );
+			static ConVarRef c_thirdpersonshoulderaimdist( "c_thirdpersonshoulderaimdist" );
+
+			// add the shoulder offset to the origin in the cameras right vector
+			VectorMA( pSetup->origin, c_thirdpersonshoulderoffset.GetFloat(), camRight, pSetup->origin );
+
+			// add the shoulder height to the origin in the cameras up vector
+			VectorMA( pSetup->origin, c_thirdpersonshoulderheight.GetFloat(), camUp, pSetup->origin );
+
+			// adjust the yaw to the aim-point
+			camAngles[ YAW ] += RAD2DEG( atan(c_thirdpersonshoulderoffset.GetFloat() / (c_thirdpersonshoulderaimdist.GetFloat() + cam_ofs[ ROLL ])) );
+
+			// adjust the pitch to the aim-point
+			camAngles[ PITCH ] += RAD2DEG( atan(c_thirdpersonshoulderheight.GetFloat() / (c_thirdpersonshoulderaimdist.GetFloat() + cam_ofs[ ROLL ])) );
+		}
+
 		// Override angles from third person camera
 		VectorCopy( camAngles, pSetup->angles );
 	}

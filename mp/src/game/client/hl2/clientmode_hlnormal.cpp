@@ -14,6 +14,9 @@
 #include "iinput.h"
 #include "ienginevgui.h"
 
+#include "hl2mpclientscoreboard.h"
+#include "hl2mptextwindow.h"
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -53,7 +56,8 @@ protected:
 		SetPaintBackgroundEnabled( false );
 	}
 
-	virtual void CreateDefaultPanels( void ) { /* don't create any panels yet*/ };
+	//virtual void CreateDefaultPanels( void ) { /* don't create any panels yet*/ };
+    virtual IViewPortPanel *CreatePanelByName( const char *szPanelName );
 };
 
 
@@ -95,5 +99,21 @@ bool ClientModeHLNormal::ShouldDrawCrosshair( void )
 	return ( g_bRollingCredits == false );
 }
 
+IViewPortPanel * CHudViewport::CreatePanelByName( const char * szPanelName ) 
+{
+    IViewPortPanel* newpanel = NULL;
 
+	if ( Q_strcmp( PANEL_SCOREBOARD, szPanelName) == 0 )
+	{
+		newpanel = new CHL2MPClientScoreBoardDialog( this );
+		return newpanel;
+	}
+	else if ( Q_strcmp(PANEL_SPECGUI, szPanelName) == 0 )
+	{
+		newpanel = new CHL2MPSpectatorGUI( this );	
+		return newpanel;
+	}
 
+	
+	return BaseClass::CreatePanelByName( szPanelName ); 
+}

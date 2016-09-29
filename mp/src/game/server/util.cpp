@@ -642,6 +642,9 @@ CBasePlayer* UTIL_PlayerByUserId( int userID )
 // 
 CBasePlayer *UTIL_GetLocalPlayer( void )
 {
+    return UTIL_GetIdealPlayer();
+
+    /*
 	if ( gpGlobals->maxClients > 1 )
 	{
 		if ( developer.GetBool() )
@@ -657,6 +660,47 @@ CBasePlayer *UTIL_GetLocalPlayer( void )
 	}
 
 	return UTIL_PlayerByIndex( 1 );
+    */
+}
+
+CBasePlayer *UTIL_GetMainPlayer()
+{
+    return UTIL_PlayerByIndex( 1 );
+}
+
+CBasePlayer *UTIL_GetIdealPlayer()
+{
+    if ( UTIL_PlayerByIndex(2) )
+        return UTIL_PlayerByIndex(2);
+
+    return UTIL_PlayerByIndex( 1 );
+}
+
+CBasePlayer *UTIL_GetRandomPlayer()
+{
+    CUtlVector<CBasePlayer *> m_nPlayers;
+
+    // Also include all players
+	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	{
+		CBasePlayer	*pPlayer = UTIL_PlayerByIndex( i );
+
+		if ( pPlayer == NULL )
+			continue;
+
+        if ( !pPlayer->IsAlive() )
+            continue;
+
+        m_nPlayers.AddToTail( pPlayer );
+    }
+
+    if ( m_nPlayers.Count() == 0 )
+        return NULL;
+
+    if ( m_nPlayers.Count() == 1 )
+        return m_nPlayers.Element(0);
+
+    return m_nPlayers.Element( RandomInt(0, (m_nPlayers.Count()-1)) );
 }
 
 //

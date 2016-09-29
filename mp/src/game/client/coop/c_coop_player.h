@@ -9,6 +9,7 @@
 
 #include "c_basehlplayer.h"
 #include "playeranimsystem.h"
+#include "beamdraw.h"
 
 //================================================================================
 // Jugador para el modo cooperativo
@@ -40,6 +41,9 @@ public:
     virtual void PostThink();
     virtual void Simulate();
 
+    virtual void AddEntity();
+    virtual void ReleaseFlashlight();
+
     virtual int GetIDTarget() const { return m_iIDEntIndex; }
     virtual void UpdateIDTarget();
 
@@ -47,6 +51,8 @@ public:
 
     virtual void ItemPreFrame();
     virtual void ItemPostFrame();
+
+    virtual float GetFOV();
 
     // Posición y Render
     virtual const QAngle &EyeAngles();
@@ -87,6 +93,8 @@ protected:
     bool m_fIsWalking;
     int m_iSpawnInterpCounter;
     int m_iSpawnInterpCounterCache;
+
+    Beam_t *m_pFlashlightBeam;
 
     CPlayerAnimationSystem *m_pAnimState;
     CountdownTimer m_nBlinkTimer;

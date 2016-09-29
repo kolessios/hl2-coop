@@ -1253,7 +1253,7 @@ public:
 	
 	//---------------------------------
 
-	static bool			FindSpotForNPCInRadius( Vector *pResult, const Vector &vStartPos, CAI_BaseNPC *pNPC, float radius, bool bOutOfPlayerViewcone = false );
+	static bool			FindSpotForNPCInRadius( Vector *pResult, const Vector &vStartPos, CBaseEntity *pEntity, float radius, bool bOutOfPlayerViewcone = false );
 
 	//---------------------------------
 

@@ -140,7 +140,7 @@ public:
 	void SetFlashlightEnabled( bool bState );
 
 	// Apply a battery
-	bool ApplyBattery( float powerMultiplier = 1.0 );
+	virtual bool ApplyBattery( float powerMultiplier = 1.0 );
 
 	// Commander Mode for controller NPCs
 	enum CommanderCommand_t

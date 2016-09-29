@@ -32,6 +32,7 @@ public:
 
     // Principales
     virtual void Spawn();
+    virtual void GiveAll( bool bWeapons = true );
     virtual CBaseEntity *Respawn();
     virtual void Precache();
 
@@ -41,6 +42,12 @@ public:
     virtual const char *GetPlayerModel();
 
     virtual void CreateViewModel( int index );
+
+    // Armas
+    virtual int	GiveAmmo( int iCount, const char *szName, bool bSuppressSound = false );
+    virtual CBaseEntity	*GiveNamedItem( const char *szName, int iSubType = 0 );
+    virtual int	TakeHealth( float flHealth, int bitsDamageType );
+    virtual bool ApplyBattery( float powerMultiplier = 1.0 );
 
     // Salud
     virtual void Event_Killed( const CTakeDamageInfo &info );
@@ -72,6 +79,8 @@ public:
 
 protected:
     CPlayerAnimationSystem *m_pAnimState;
+    Vector m_vecDeathPosition;
+    bool m_bSpawning;
 
     CNetworkQAngle( m_angEyeAngles );
     CNetworkVar( int, m_iSpawnInterpCounter );

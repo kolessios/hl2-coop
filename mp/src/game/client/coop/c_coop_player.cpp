@@ -6,6 +6,11 @@
 #include "prediction.h"
 #include "view.h"
 
+#include "input.h"
+#include "dlight.h"
+#include "r_efx.h"
+#include "iviewrender_beams.h"
+
 #include "in_buttons.h"
 #include "debugoverlay_shared.h"
 
@@ -16,6 +21,8 @@
 #define	HL2_NORM_SPEED hl2_normspeed.GetFloat()
 #define	HL2_SPRINT_SPEED hl2_sprintspeed.GetFloat()
 
+static ConVar cl_coop_ideal_height("cl_coop_ideal_height", "3");
+
 //================================================================================
 // Información y Red
 //================================================================================
@@ -24,12 +31,12 @@ IMPLEMENT_NETWORKCLASS_ALIASED( CoopPlayer, DT_CoopPlayer )
 
 // Local Player
 BEGIN_RECV_TABLE_NOBASE( C_CoopPlayer, DT_CoopLocalPlayerExclusive )
-    //RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
+    RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
 END_RECV_TABLE()
 
 // Other Players
 BEGIN_RECV_TABLE_NOBASE( C_CoopPlayer, DT_CoopNonLocalPlayerExclusive )
-    //RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
+    RecvPropVector( RECVINFO_NAME( m_vecNetworkOrigin, m_vecOrigin ) ),
 END_RECV_TABLE()
 
 BEGIN_NETWORK_TABLE( C_CoopPlayer, DT_CoopPlayer )
@@ -77,6 +84,8 @@ C_CoopPlayer::~C_CoopPlayer()
     // Liberamos el sistema de animación
     if ( AnimationSystem() )
         AnimationSystem()->Release();
+
+    ReleaseFlashlight();
 }
 
 //================================================================================
@@ -158,9 +167,116 @@ void C_CoopPlayer::Simulate()
 
 //================================================================================
 //================================================================================
+void C_CoopPlayer::AddEntity() 
+{
+    BaseClass::AddEntity();
+
+    if ( !IsLocalPlayer() )
+    {
+        if ( IsEffectActive( EF_DIMLIGHT ) )
+		{
+			int iAttachment = LookupAttachment( "anim_attachment_LH" );
+
+			if ( iAttachment < 0 )
+				return;
+
+			Vector vecOrigin;
+			QAngle eyeAngles = m_angEyeAngles;
+	
+			GetAttachment( iAttachment, vecOrigin, eyeAngles );
+
+			Vector vForward;
+			AngleVectors( eyeAngles, &vForward );
+				
+			trace_t tr;
+			UTIL_TraceLine( vecOrigin, vecOrigin + (vForward * 200), MASK_SHOT, this, COLLISION_GROUP_NONE, &tr );
+
+			if( !m_pFlashlightBeam )
+			{
+				BeamInfo_t beamInfo;
+				beamInfo.m_nType = TE_BEAMPOINTS;
+				beamInfo.m_vecStart = tr.startpos;
+				beamInfo.m_vecEnd = tr.endpos;
+				beamInfo.m_pszModelName = "sprites/glow01.vmt";
+				beamInfo.m_pszHaloName = "sprites/glow01.vmt";
+				beamInfo.m_flHaloScale = 3.0;
+				beamInfo.m_flWidth = 8.0f;
+				beamInfo.m_flEndWidth = 35.0f;
+				beamInfo.m_flFadeLength = 300.0f;
+				beamInfo.m_flAmplitude = 0;
+				beamInfo.m_flBrightness = 60.0;
+				beamInfo.m_flSpeed = 0.0f;
+				beamInfo.m_nStartFrame = 0.0;
+				beamInfo.m_flFrameRate = 0.0;
+				beamInfo.m_flRed = 255.0;
+				beamInfo.m_flGreen = 255.0;
+				beamInfo.m_flBlue = 255.0;
+				beamInfo.m_nSegments = 8;
+				beamInfo.m_bRenderable = true;
+				beamInfo.m_flLife = 0.5;
+				beamInfo.m_nFlags = FBEAM_FOREVER | FBEAM_ONLYNOISEONCE | FBEAM_NOTILE | FBEAM_HALOBEAM;
+				
+				m_pFlashlightBeam = beams->CreateBeamPoints( beamInfo );
+			}
+
+			if( m_pFlashlightBeam )
+			{
+				BeamInfo_t beamInfo;
+				beamInfo.m_vecStart = tr.startpos;
+				beamInfo.m_vecEnd = tr.endpos;
+				beamInfo.m_flRed = 255.0;
+				beamInfo.m_flGreen = 255.0;
+				beamInfo.m_flBlue = 255.0;
+
+				beams->UpdateBeamInfo( m_pFlashlightBeam, beamInfo );
+
+				dlight_t *el = effects->CL_AllocDlight( 0 );
+				el->origin = tr.endpos;
+				el->radius = 70; 
+				el->color.r = 200;
+				el->color.g = 200;
+				el->color.b = 200;
+				el->die = gpGlobals->curtime + 0.1f;
+			}
+		}
+		else if ( m_pFlashlightBeam )
+		{
+			ReleaseFlashlight();
+		}
+    }
+    else
+    {
+        if ( input->CAM_IsThirdPerson() )
+        {
+            dlight_t *tl = effects->CL_AllocDlight( entindex() );
+			tl->origin = EyePosition();
+			tl->radius = 70; 
+			tl->color.r = 200;
+			tl->color.g = 200;
+			tl->color.b = 200;
+			tl->die = gpGlobals->curtime + 0.1f;
+        }
+    }
+}
+
+//================================================================================
+//================================================================================
+void C_CoopPlayer::ReleaseFlashlight() 
+{
+    if( m_pFlashlightBeam )
+	{
+		m_pFlashlightBeam->flags = 0;
+		m_pFlashlightBeam->die = gpGlobals->curtime - 1;
+
+		m_pFlashlightBeam = NULL;
+	}
+}
+
+//================================================================================
+//================================================================================
 void C_CoopPlayer::UpdateIDTarget() 
 {
-    Assert( !IsLocalPlayer() );
+    Assert( IsLocalPlayer() );
 
     // Clear old target and find a new one
 	m_iIDEntIndex = 0;
@@ -231,6 +347,22 @@ void C_CoopPlayer::ItemPostFrame()
 		 return;
 
 	BaseClass::ItemPostFrame();
+}
+
+//================================================================================
+//================================================================================
+float C_CoopPlayer::GetFOV() 
+{
+    //Find our FOV with offset zoom value
+	float flFOVOffset = C_BasePlayer::GetFOV() + GetZoom();
+
+	// Clamp FOV in MP
+	int min_fov = 5;
+	
+	// Don't let it go too low
+	flFOVOffset = MAX( min_fov, flFOVOffset );
+
+	return flFOVOffset;
 }
 
 //================================================================================
@@ -488,4 +620,44 @@ bool C_CoopPlayer::ShouldReceiveProjectedTextures( int flags )
          return false;
 
     return true;
+}
+
+const char *UTIL_VarArgs( const char *format, ... )
+{
+	va_list		argptr;
+	static char		string[1024];
+	
+	va_start (argptr, format);
+	Q_vsnprintf(string, sizeof(string), format,argptr);
+	va_end (argptr);
+
+	return string;	
+}
+
+CON_COMMAND( toggle_camera, "" )
+{
+    if ( input->CAM_IsThirdPerson() )
+    {
+         engine->ClientCmd("exec firstperson\n");
+    }
+    else
+    {
+        engine->ClientCmd("exec overshoulder\n");
+        engine->ClientCmd( UTIL_VarArgs("c_thirdpersonshoulderheight %i \n", cl_coop_ideal_height.GetInt()) );
+        //input->CAM_ToThirdPersonShoulder();
+    }
+}
+
+CON_COMMAND( fix_camera, "" )
+{
+    if ( cl_coop_ideal_height.GetInt() == 3 )
+    {
+        cl_coop_ideal_height.SetValue( -20 );
+    }
+    else
+    {
+        cl_coop_ideal_height.SetValue( 3 );
+    }
+
+    engine->ClientCmd( UTIL_VarArgs("c_thirdpersonshoulderheight %i \n", cl_coop_ideal_height.GetInt()) );
 }

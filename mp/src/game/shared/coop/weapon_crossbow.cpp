@@ -31,6 +31,7 @@
     #include "ilagcompensationmanager.h"
 #else
     #include "c_te_effect_dispatch.h"
+    #include "input.h"
     #define CWeaponCrossbow C_WeaponCrossbow
 #endif
 
@@ -518,6 +519,8 @@ private:
 	ChargerState_t		m_nChargeState;
 	CHandle<CSprite>	m_hChargerSprite;
 
+    bool m_bIsInThirdPerson;
+
 	CNetworkVar( bool, m_bInZoom );
 	CNetworkVar( bool, m_bMustReload );
 };
@@ -816,7 +819,29 @@ void CWeaponCrossbow::ToggleZoom( void )
 	if ( pPlayer == NULL )
 		return;
 
-    #ifndef CLIENT_DLL
+#ifdef CLIENT_DLL
+    // Jugador local
+    // Cambiamos a primera persona al apuntar siempre
+    /*if ( pPlayer->IsLocalPlayer() )
+    {
+        ConVarRef c_thirdpersonshoulder("c_thirdpersonshoulder");
+        
+        // Activando zoom
+        if ( !m_bInZoom )
+        {
+            m_bIsInThirdPerson = c_thirdpersonshoulder.GetBool();
+            input->CAM_ToFirstPerson();
+        }
+        else
+        {
+            if ( m_bIsInThirdPerson )
+            {
+                input->CAM_ToThirdPersonShoulder();
+            }
+        }
+    }*/
+#endif
+
 	if ( m_bInZoom )
 	{
 		if ( pPlayer->SetFOV( this, 0, 0.2f ) )
@@ -826,12 +851,11 @@ void CWeaponCrossbow::ToggleZoom( void )
 	}
 	else
 	{
-		if ( pPlayer->SetFOV( this, 20, 0.1f ) )
+		if ( pPlayer->SetFOV( this, 60, 0.1f ) )
 		{
 			m_bInZoom = true;
 		}
 	}
-    #endif
 }
 
 #define	BOLT_TIP_ATTACHMENT	2

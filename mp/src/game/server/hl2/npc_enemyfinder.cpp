@@ -344,17 +344,26 @@ void CNPC_EnemyFinder::StartNPC ( void )
 											// the ground just because it's not MOVETYPE_FLY
 	BaseClass::StartNPC();
 
-	if ( AI_IsSinglePlayer() && m_PlayerFreePass.GetParams().duration > 0.1 )
+	if ( m_PlayerFreePass.GetParams().duration > 0.1 )
 	{
-		m_PlayerFreePass.SetPassTarget( UTIL_PlayerByIndex(1) );
+        // Also include all players
+	    for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	    {
+		    CBasePlayer	*pPlayer = UTIL_PlayerByIndex( i );
 
-		AI_FreePassParams_t freePassParams = m_PlayerFreePass.GetParams();
+		    if ( pPlayer == NULL )
+			    continue;
 
-		freePassParams.coverDist = 120;
-		freePassParams.peekEyeDist = 1.75;
-		freePassParams.peekEyeDistZ = 4;
+		    m_PlayerFreePass.SetPassTarget( pPlayer );
 
-		m_PlayerFreePass.SetParams( freePassParams );
+		    AI_FreePassParams_t freePassParams = m_PlayerFreePass.GetParams();
+
+		    freePassParams.coverDist = 120;
+		    freePassParams.peekEyeDist = 1.75;
+		    freePassParams.peekEyeDistZ = 4;
+
+		    m_PlayerFreePass.SetParams( freePassParams );
+        }
 	}
 
 	if (!m_nStartOn)
@@ -416,20 +425,28 @@ bool CNPC_EnemyFinder::ShouldAlwaysThink()
 	if ( BaseClass::ShouldAlwaysThink() )
 		return true;
 		
-	CBasePlayer *pPlayer = AI_GetSinglePlayer();
-	if ( pPlayer && IRelationType( pPlayer ) == D_HT )
+	// Also include all players
+	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 	{
-		float playerDistSqr = GetAbsOrigin().DistToSqr( pPlayer->GetAbsOrigin() );
+		CBasePlayer	*pPlayer = UTIL_PlayerByIndex( i );
 
-		if ( !m_flMaxSearchDist || playerDistSqr <= Square(m_flMaxSearchDist) )
-		{
-			if ( !FBitSet( m_spawnflags, SF_ENEMY_FINDER_CHECK_VIS) )
-				return true;
+		if ( pPlayer == NULL )
+			continue;
+
+	    if ( pPlayer && IRelationType( pPlayer ) == D_HT )
+	    {
+		    float playerDistSqr = GetAbsOrigin().DistToSqr( pPlayer->GetAbsOrigin() );
+
+		    if ( !m_flMaxSearchDist || playerDistSqr <= Square(m_flMaxSearchDist) )
+		    {
+			    if ( !FBitSet( m_spawnflags, SF_ENEMY_FINDER_CHECK_VIS) )
+				    return true;
 				
-			if ( playerDistSqr <= Square( 50 * 12 ) )
-				return true;
-		}
-	}
+			    if ( playerDistSqr <= Square( 50 * 12 ) )
+				    return true;
+		    }
+	    }
+    }
 	
 	return false;
 }

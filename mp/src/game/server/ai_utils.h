@@ -23,12 +23,15 @@
 
 inline CBasePlayer *AI_GetSinglePlayer()
 {
+    return UTIL_GetIdealPlayer();
+    /*
 	if ( gpGlobals->maxClients > 1 )
 	{
 		return NULL;
 	}
 	
 	return UTIL_GetLocalPlayer();
+    */
 }
 
 inline bool AI_IsSinglePlayer()

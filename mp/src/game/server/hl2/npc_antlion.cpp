@@ -4031,64 +4031,72 @@ bool CNPC_Antlion::CorpseGib( const CTakeDamageInfo &info )
 //-----------------------------------------------------------------------------
 void CNPC_Antlion::Touch( CBaseEntity *pOther )
 {
-	//See if the touching entity is a vehicle
-	CBasePlayer *pPlayer = ToBasePlayer( AI_GetSinglePlayer() );
-	
-	// FIXME: Technically we'll want to check to see if a vehicle has touched us with the player OR NPC driver
-
-	if ( pPlayer && pPlayer->IsInAVehicle() )
+    // Also include all players
+	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 	{
-		IServerVehicle	*pVehicle = pPlayer->GetVehicle();
-		CBaseEntity *pVehicleEnt = pVehicle->GetVehicleEnt();
+		CBasePlayer	*pPlayer = UTIL_PlayerByIndex( i );
 
-		if ( pVehicleEnt == pOther )
-		{
-			CPropVehicleDriveable	*pDrivableVehicle = dynamic_cast<CPropVehicleDriveable *>( pVehicleEnt );
+		if ( pPlayer == NULL )
+			continue;
+	    //See if the touching entity is a vehicle
+	    //CBasePlayer *pPlayer = ToBasePlayer( AI_GetSinglePlayer() );
+	
+	    // FIXME: Technically we'll want to check to see if a vehicle has touched us with the player OR NPC driver
 
-			if ( pDrivableVehicle != NULL )
-			{
-				//Get tossed!
-				Vector	vecShoveDir = pOther->GetAbsVelocity();
-				Vector	vecTargetDir = GetAbsOrigin() - pOther->GetAbsOrigin();
+	    if ( pPlayer && pPlayer->IsInAVehicle() )
+	    {
+		    IServerVehicle	*pVehicle = pPlayer->GetVehicle();
+		    CBaseEntity *pVehicleEnt = pVehicle->GetVehicleEnt();
+
+		    if ( pVehicleEnt == pOther )
+		    {
+			    CPropVehicleDriveable	*pDrivableVehicle = dynamic_cast<CPropVehicleDriveable *>( pVehicleEnt );
+
+			    if ( pDrivableVehicle != NULL )
+			    {
+				    //Get tossed!
+				    Vector	vecShoveDir = pOther->GetAbsVelocity();
+				    Vector	vecTargetDir = GetAbsOrigin() - pOther->GetAbsOrigin();
 				
-				VectorNormalize( vecShoveDir );
-				VectorNormalize( vecTargetDir );
+				    VectorNormalize( vecShoveDir );
+				    VectorNormalize( vecTargetDir );
 
-				bool bBurrowingOut = IsCurSchedule( SCHED_ANTLION_BURROW_OUT );
+				    bool bBurrowingOut = IsCurSchedule( SCHED_ANTLION_BURROW_OUT );
 
-				if ( ( ( pDrivableVehicle->m_nRPM > 75 ) && DotProduct( vecShoveDir, vecTargetDir ) <= 0 ) || bBurrowingOut == true )
-				{
-					if ( IsFlipped() || bBurrowingOut == true )
-					{
-						float flDamage = m_iHealth;
+				    if ( ( ( pDrivableVehicle->m_nRPM > 75 ) && DotProduct( vecShoveDir, vecTargetDir ) <= 0 ) || bBurrowingOut == true )
+				    {
+					    if ( IsFlipped() || bBurrowingOut == true )
+					    {
+						    float flDamage = m_iHealth;
 
-						if ( random->RandomInt( 0, 10 ) > 4 )
-							 flDamage += 25;
+						    if ( random->RandomInt( 0, 10 ) > 4 )
+							     flDamage += 25;
 									
-						CTakeDamageInfo	dmgInfo( pVehicleEnt, pPlayer, flDamage, DMG_VEHICLE );
+						    CTakeDamageInfo	dmgInfo( pVehicleEnt, pPlayer, flDamage, DMG_VEHICLE );
 					
-						CalculateMeleeDamageForce( &dmgInfo, vecShoveDir, pOther->GetAbsOrigin() );
-						TakeDamage( dmgInfo );
-					}
-					else
-					{
-						// We're being shoved
-						CTakeDamageInfo	dmgInfo( pVehicleEnt, pPlayer, 0, DMG_VEHICLE );
-						PainSound( dmgInfo );
+						    CalculateMeleeDamageForce( &dmgInfo, vecShoveDir, pOther->GetAbsOrigin() );
+						    TakeDamage( dmgInfo );
+					    }
+					    else
+					    {
+						    // We're being shoved
+						    CTakeDamageInfo	dmgInfo( pVehicleEnt, pPlayer, 0, DMG_VEHICLE );
+						    PainSound( dmgInfo );
 
-						SetCondition( COND_ANTLION_FLIPPED );
+						    SetCondition( COND_ANTLION_FLIPPED );
 
-						vecTargetDir[2] = 0.0f;
+						    vecTargetDir[2] = 0.0f;
 
-						ApplyAbsVelocityImpulse( ( vecTargetDir * 250.0f ) + Vector(0,0,64.0f) );
-						SetGroundEntity( NULL );
+						    ApplyAbsVelocityImpulse( ( vecTargetDir * 250.0f ) + Vector(0,0,64.0f) );
+						    SetGroundEntity( NULL );
 
-						CSoundEnt::InsertSound( SOUND_PHYSICS_DANGER, GetAbsOrigin(), 256, 0.5f, this );
-					}
-				}
-			}
-		}
-	}
+						    CSoundEnt::InsertSound( SOUND_PHYSICS_DANGER, GetAbsOrigin(), 256, 0.5f, this );
+					    }
+				    }
+			    }
+		    }
+	    }
+    }
 
 	BaseClass::Touch( pOther );
 

@@ -91,9 +91,9 @@ void CMessage::Precache( void )
 //-----------------------------------------------------------------------------
 void CMessage::InputShowMessage( inputdata_t &inputdata )
 {
-	CBaseEntity *pPlayer = NULL;
+	//CBaseEntity *pPlayer = NULL;
 
-	if ( m_spawnflags & SF_MESSAGE_ALL )
+	/*if ( m_spawnflags & SF_MESSAGE_ALL )
 	{
 		UTIL_ShowMessageAll( STRING( m_iszMessage ) );
 	}
@@ -112,7 +112,8 @@ void CMessage::InputShowMessage( inputdata_t &inputdata )
 		{
 			UTIL_ShowMessage( STRING( m_iszMessage ), ToBasePlayer( pPlayer ) );
 		}
-	}
+	}*/
+    UTIL_ShowMessageAll( STRING( m_iszMessage ) );
 
 	if ( m_sNoise != NULL_STRING )
 	{
@@ -219,9 +220,9 @@ void CCredits::RollOutroCredits()
 {
 	sv_unlockedchapters.SetValue( "15" );
 	
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	//CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
 
-	CSingleUserRecipientFilter user( pPlayer );
+	CBroadcastRecipientFilter user;
 	user.MakeReliable();
 
 	UserMessageBegin( user, "CreditsMsg" );
@@ -241,9 +242,9 @@ void CCredits::InputRollOutroCredits( inputdata_t &inputdata )
 
 void CCredits::InputShowLogo( inputdata_t &inputdata )
 {
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	//CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
 
-	CSingleUserRecipientFilter user( pPlayer );
+	CBroadcastRecipientFilter user;
 	user.MakeReliable();
 
 	if ( m_flLogoLength )
@@ -267,9 +268,9 @@ void CCredits::InputSetLogoLength( inputdata_t &inputdata )
 
 void CCredits::InputRollCredits( inputdata_t &inputdata )
 {
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	//CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
 
-	CSingleUserRecipientFilter user( pPlayer );
+	CBroadcastRecipientFilter user;
 	user.MakeReliable();
 
 	UserMessageBegin( user, "CreditsMsg" );

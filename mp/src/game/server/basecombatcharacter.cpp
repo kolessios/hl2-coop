@@ -3274,7 +3274,7 @@ CBaseEntity *CBaseCombatCharacter::FindMissTarget( void )
 	CBaseEntity *pMissCandidates[ MAX_MISS_CANDIDATES ];
 	int numMissCandidates = 0;
 
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	//CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
 	CBaseEntity *pEnts[256];
 	Vector		radius( 100, 100, 100);
 	Vector		vecSource = GetAbsOrigin();
@@ -3287,8 +3287,8 @@ CBaseEntity *CBaseCombatCharacter::FindMissTarget( void )
 			continue;
 
 		// New rule for this system. Don't shoot what the player won't see.
-		if ( pPlayer && !pPlayer->FInViewCone( pEnts[ i ] ) )
-			continue;
+		//if ( pPlayer && !pPlayer->FInViewCone( pEnts[ i ] ) )
+			//continue;
 
 		if ( numMissCandidates >= MAX_MISS_CANDIDATES )
 			break;

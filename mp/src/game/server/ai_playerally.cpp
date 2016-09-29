@@ -406,45 +406,53 @@ void CAI_PlayerAlly::GatherConditions( void )
 		SetCondition( COND_TALKER_CLIENTUNSEEN );
 	}
 
-	CBasePlayer *pLocalPlayer = AI_GetSinglePlayer();
 
-	if ( !pLocalPlayer )
+    // Also include all players
+	for ( int i = 1; i <= gpGlobals->maxClients; i++ )
 	{
-		if ( AI_IsSinglePlayer() )
-			SetCondition( COND_TALKER_PLAYER_DEAD );
-		return;
-	}
+		CBasePlayer	*pLocalPlayer = UTIL_PlayerByIndex( i );
 
-	if ( !pLocalPlayer->IsAlive() )
-	{
-		SetCondition( COND_TALKER_PLAYER_DEAD );
-	}
+		if ( pLocalPlayer == NULL )
+			continue;
+
+	    if ( !pLocalPlayer )
+	    {
+		    if ( AI_IsSinglePlayer() )
+			    SetCondition( COND_TALKER_PLAYER_DEAD );
+		    return;
+	    }
+
+	    if ( !pLocalPlayer->IsAlive() )
+	    {
+		    SetCondition( COND_TALKER_PLAYER_DEAD );
+	    }
 	
-	if ( HasCondition( COND_SEE_PLAYER ) )
-	{
+	    if ( HasCondition( COND_SEE_PLAYER ) )
+	    {
 				
-		bool bPlayerIsLooking = false;
-		if ( ( pLocalPlayer->GetAbsOrigin() - GetAbsOrigin() ).Length2DSqr() < Square(TALKER_STARE_DIST) )
-		{
-			if ( pLocalPlayer->FInViewCone( EyePosition() ) )
-			{
-				if ( pLocalPlayer->GetSmoothedVelocity().LengthSqr() < Square( 100 ) )
-					bPlayerIsLooking = true;
-			}
-		}
+		    bool bPlayerIsLooking = false;
+		    if ( ( pLocalPlayer->GetAbsOrigin() - GetAbsOrigin() ).Length2DSqr() < Square(TALKER_STARE_DIST) )
+		    {
+			    if ( pLocalPlayer->FInViewCone( EyePosition() ) )
+			    {
+				    if ( pLocalPlayer->GetSmoothedVelocity().LengthSqr() < Square( 100 ) )
+					    bPlayerIsLooking = true;
+			    }
+		    }
 		
-		if ( bPlayerIsLooking )
-		{
-			SetCondition( COND_TALKER_PLAYER_STARING );
-			if ( m_flTimePlayerStartStare == 0 )
-				m_flTimePlayerStartStare = gpGlobals->curtime;
-		}
-		else
-		{
-			m_flTimePlayerStartStare = 0;
-			ClearCondition( COND_TALKER_PLAYER_STARING );
-		}
-	}
+		    if ( bPlayerIsLooking )
+		    {
+			    SetCondition( COND_TALKER_PLAYER_STARING );
+			    if ( m_flTimePlayerStartStare == 0 )
+				    m_flTimePlayerStartStare = gpGlobals->curtime;
+		    }
+		    else
+		    {
+			    m_flTimePlayerStartStare = 0;
+			    ClearCondition( COND_TALKER_PLAYER_STARING );
+		    }
+	    }
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -1002,10 +1010,10 @@ void CAI_PlayerAlly::StartTask( const Task_t *pTask )
 	{
 	case TASK_MOVE_AWAY_PATH:
 		{
-			if ( HasCondition( COND_PLAYER_PUSHING ) && AI_IsSinglePlayer() )
+			if ( HasCondition( COND_PLAYER_PUSHING ) /*&& AI_IsSinglePlayer()*/ )
 			{
 				// @TODO (toml 10-22-04): cope with multiplayer push
-				GetMotor()->SetIdealYawToTarget( UTIL_GetLocalPlayer()->WorldSpaceCenter() );
+				GetMotor()->SetIdealYawToTarget( UTIL_GetIdealPlayer()->WorldSpaceCenter() );
 			}
 			BaseClass::StartTask( pTask );
 			break;
@@ -1172,7 +1180,7 @@ void CAI_PlayerAlly::Event_Killed( const CTakeDamageInfo &info )
 	// notify the player
 	if ( IsInPlayerSquad() )
 	{
-		CBasePlayer *player = AI_GetSinglePlayer();
+		CBasePlayer *player = UTIL_GetMainPlayer();
 		if ( player )
 		{
 			variant_t emptyVariant;
@@ -1459,7 +1467,7 @@ bool CAI_PlayerAlly::IsOkToSpeak( ConceptCategory_t category, bool fRespondingTo
 		}
 
 		// Don't talk if we're too far from the player
-		CBaseEntity *pPlayer = AI_GetSinglePlayer();
+		CBaseEntity *pPlayer = UTIL_GetIdealPlayer();
 		if ( pPlayer )
 		{
 			float flDist = sv_npc_talker_maxdist.GetFloat();

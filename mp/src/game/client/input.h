@@ -87,6 +87,7 @@ public:
 	virtual		void		CAM_Think( void );
 	virtual		int			CAM_IsThirdPerson( void );
 	virtual		void		CAM_ToThirdPerson(void);
+    virtual     void        CAM_ToThirdPersonShoulder();
 	virtual		void		CAM_ToFirstPerson(void);
 	virtual		void		CAM_StartMouseMove(void);
 	virtual		void		CAM_EndMouseMove(void);

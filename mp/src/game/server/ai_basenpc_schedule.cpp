@@ -3363,7 +3363,7 @@ void CAI_BaseNPC::RunTask( const Task_t *pTask )
 	case TASK_FACE_PLAYER:
 		{
 			// Get edict for one player
-			CBasePlayer *pPlayer = AI_GetSinglePlayer();
+			CBasePlayer *pPlayer = UTIL_GetIdealPlayer();
 			if ( pPlayer )
 			{
 				GetMotor()->SetIdealYawToTargetAndUpdate( pPlayer->GetAbsOrigin(), AI_KEEP_YAW_SPEED );

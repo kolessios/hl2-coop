@@ -644,9 +644,6 @@ void CAI_BaseNPC::Ignite( float flFlameLifetime, bool bNPCOnly, float flSize, bo
 {
 	BaseClass::Ignite( flFlameLifetime, bNPCOnly, flSize, bCalledByLevelDesigner );
 
-    AI_GetSinglePlayer();
-    UTIL_GetLocalPlayer();
-
 #ifdef HL2_EPISODIC
 	CBasePlayer *pPlayer = AI_GetSinglePlayer();
 	if ( pPlayer->IRelationType( this ) != D_LI )
@@ -782,9 +779,9 @@ int CAI_BaseNPC::OnTakeDamage_Alive( const CTakeDamageInfo &info )
 		{
 			// See if the person that injured me is an NPC.
 			CAI_BaseNPC *pAttacker = dynamic_cast<CAI_BaseNPC *>( info.GetAttacker() );
-			CBasePlayer *pPlayer = AI_GetSinglePlayer();
+			//CBasePlayer *pPlayer = AI_GetSinglePlayer();
 
-			if( pAttacker && pAttacker->IsAlive() && pPlayer )
+			if( pAttacker && pAttacker->IsAlive() /*&& pPlayer*/ )
 			{
 				if( pAttacker->GetSquad() != NULL && pAttacker->IsInPlayerSquad() )
 				{
@@ -3115,7 +3112,7 @@ void CAI_BaseNPC::UpdateEfficiency( bool bInPVS )
 
 	//---------------------------------
 
-	CBasePlayer *pPlayer = AI_GetSinglePlayer(); 
+	CBasePlayer *pPlayer = NULL;//AI_GetSinglePlayer(); 
 	static Vector vPlayerEyePosition;
 	static Vector vPlayerForward;
 	static int iPrevFrame = -1;
@@ -3359,7 +3356,7 @@ void CAI_BaseNPC::UpdateSleepState( bool bInPVS )
 {
 	if ( GetSleepState() > AISS_AWAKE )
 	{
-		CBasePlayer *pLocalPlayer = AI_GetSinglePlayer();
+		/*CBasePlayer *pLocalPlayer = AI_GetSinglePlayer();
 		if ( !pLocalPlayer )
 		{
 			if ( gpGlobals->maxClients > 1 )
@@ -3375,7 +3372,7 @@ void CAI_BaseNPC::UpdateSleepState( bool bInPVS )
 
 		if ( m_flWakeRadius > .1 && !(pLocalPlayer->GetFlags() & FL_NOTARGET) && ( pLocalPlayer->GetAbsOrigin() - GetAbsOrigin() ).LengthSqr() <= Square(m_flWakeRadius) )
 			Wake();
-		else if ( GetSleepState() == AISS_WAITING_FOR_PVS )
+		else */if ( GetSleepState() == AISS_WAITING_FOR_PVS )
 		{
 			if ( bInPVS )
 				Wake();
@@ -3559,7 +3556,7 @@ void CAI_BaseNPC::RebalanceThinks()
 
 		int i;
 
-		CBasePlayer *pPlayer = AI_GetSinglePlayer();
+		CBasePlayer *pPlayer = NULL;//AI_GetSinglePlayer();
 		Vector vPlayerForward;
 		Vector vPlayerEyePosition;
 
@@ -3840,7 +3837,7 @@ void CAI_BaseNPC::SetPlayerAvoidState( void )
 
 		GetPlayerAvoidBounds( &vMins, &vMaxs );
 
-		CBasePlayer *pLocalPlayer = AI_GetSinglePlayer();
+		CBasePlayer *pLocalPlayer = NULL;//AI_GetSinglePlayer();
 
 		if ( pLocalPlayer )
 		{
@@ -11923,7 +11920,7 @@ bool CAI_BaseNPC::CineCleanup()
 			{
 				SetLocalOrigin( origin );
 
-				int drop = UTIL_DropToFloor( this, MASK_NPCSOLID, UTIL_GetLocalPlayer() );
+				int drop = UTIL_DropToFloor( this, MASK_NPCSOLID, NULL );
 
 				// Origin in solid?  Set to org at the end of the sequence
 				if ( ( drop < 0 ) || sv_test_scripted_sequences.GetBool() )
@@ -11998,9 +11995,9 @@ void CAI_BaseNPC::Teleport( const Vector *newPosition, const QAngle *newAngles, 
 
 //-----------------------------------------------------------------------------
 
-bool CAI_BaseNPC::FindSpotForNPCInRadius( Vector *pResult, const Vector &vStartPos, CAI_BaseNPC *pNPC, float radius, bool bOutOfPlayerViewcone )
+bool CAI_BaseNPC::FindSpotForNPCInRadius( Vector *pResult, const Vector &vStartPos, CBaseEntity *pEntity, float radius, bool bOutOfPlayerViewcone )
 {
-	CBasePlayer *pPlayer = AI_GetSinglePlayer();
+	CBasePlayer *pPlayer = UTIL_GetIdealPlayer();
 	QAngle fan;
 
 	fan.x = 0;
@@ -12020,13 +12017,18 @@ bool CAI_BaseNPC::FindSpotForNPCInRadius( Vector *pResult, const Vector &vStartP
 
 		trace_t tr;
 
-		UTIL_TraceLine( vecTest, vecTest - Vector( 0, 0, 8192 ), MASK_SHOT, pNPC, COLLISION_GROUP_NONE, &tr );
+		UTIL_TraceLine( vecTest, vecTest - Vector( 0, 0, 8192 ), MASK_SHOT, pEntity, COLLISION_GROUP_NONE, &tr );
+
 		if( tr.fraction == 1.0 )
 		{
 			continue;
 		}
 
-		UTIL_TraceHull( tr.endpos,
+        if ( pEntity->IsNPC() )
+        {
+            CAI_BaseNPC *pNPC = pEntity->MyNPCPointer();
+
+            UTIL_TraceHull( tr.endpos,
 						tr.endpos + Vector( 0, 0, 10 ),
 						pNPC->GetHullMins(),
 						pNPC->GetHullMaxs(),
@@ -12035,11 +12037,32 @@ bool CAI_BaseNPC::FindSpotForNPCInRadius( Vector *pResult, const Vector &vStartP
 						COLLISION_GROUP_NONE,
 						&tr );
 
-		if( tr.fraction == 1.0 && pNPC->GetMoveProbe()->CheckStandPosition( tr.endpos, MASK_NPCSOLID ) )
-		{
-			*pResult = tr.endpos;
-			return true;
-		}
+		    if( tr.fraction == 1.0 && pNPC->GetMoveProbe()->CheckStandPosition( tr.endpos, MASK_NPCSOLID ) )
+		    {
+			    *pResult = tr.endpos;
+			    return true;
+		    }
+        }
+        else
+        {
+            UTIL_TraceHull( tr.endpos,
+						tr.endpos + Vector( 0, 0, 10 ),
+						NAI_Hull::Mins(HULL_HUMAN),
+						NAI_Hull::Maxs(HULL_HUMAN),
+						MASK_PLAYERSOLID,
+						pEntity,
+						COLLISION_GROUP_NONE,
+						&tr );
+
+		    if( tr.fraction == 1.0 )
+		    {
+                Vector position = tr.endpos;
+                position.z = (vStartPos.z + 5.0f);
+
+			    *pResult = position;
+			    return true;
+		    }
+        }		
 	}
 	return false;
 }
@@ -12534,13 +12557,8 @@ bool CAI_BaseNPC::IsPlayerAlly( CBasePlayer *pPlayer )
 { 
 	if ( pPlayer == NULL )
 	{
-		// in multiplayer mode we need a valid pPlayer 
-		// or override this virtual function
-		if ( !AI_IsSinglePlayer() )
-			return false;
-
 		// NULL means single player mode
-		pPlayer = UTIL_GetLocalPlayer();
+		pPlayer = UTIL_GetMainPlayer();
 	}
 
 	return ( !pPlayer || IRelationType( pPlayer ) == D_LI ); 
@@ -12834,7 +12852,7 @@ bool CAI_BaseNPC::FindNearestValidGoalPos( const Vector &vTestPoint, Vector *pRe
 
 	if ( vCandidate != vec3_invalid )
 	{
-		AI_Waypoint_t *pPathToPoint = GetPathfinder()->BuildRoute( GetAbsOrigin(), vCandidate, AI_GetSinglePlayer(), 5*12, NAV_NONE, true );
+		AI_Waypoint_t *pPathToPoint = GetPathfinder()->BuildRoute( GetAbsOrigin(), vCandidate, UTIL_GetIdealPlayer(), 5*12, NAV_NONE, true );
 		if ( pPathToPoint )
 		{
 			GetPathfinder()->UnlockRouteNodes( pPathToPoint );

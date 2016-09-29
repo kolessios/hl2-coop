@@ -4006,7 +4006,7 @@ void CNPC_MetroPolice::AdministerJustice( void )
 //-----------------------------------------------------------------------------
 int CNPC_MetroPolice::SelectSchedule( void )
 {
-	if ( !GetEnemy() && HasCondition( COND_IN_PVS ) && AI_GetSinglePlayer() && !AI_GetSinglePlayer()->IsAlive() )
+	if ( !GetEnemy() && HasCondition( COND_IN_PVS ) /*&& AI_GetSinglePlayer() && !AI_GetSinglePlayer()->IsAlive()*/ )
 	{
 		return SCHED_PATROL_WALK;
 	}

@@ -291,6 +291,23 @@ void CRecharge::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE use
 	{
 		UpdateJuice( m_iJuice - nIncrementArmor );
 		pl->IncrementArmorValue( nIncrementArmor, nMaxArmor );
+
+        // Also include all players
+	    for ( int i = 1; i <= gpGlobals->maxClients; i++ )
+	    {
+		    CBasePlayer	*pPlayer = UTIL_PlayerByIndex( i );
+
+		    if ( !pPlayer )
+			    continue;
+
+            if ( !pPlayer->IsAlive() )
+			    continue;
+
+            if ( pPlayer == pl )
+                continue;
+
+            pPlayer->IncrementArmorValue( nIncrementArmor, nMaxArmor );
+        }
 	}
 
 	// Send the output.

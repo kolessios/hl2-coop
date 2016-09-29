@@ -6190,7 +6190,7 @@ void CBasePlayer::CheatImpulseCommands( int iImpulse )
 #endif
 		if ( GetHealth() < 100 )
 		{
-			TakeHealth( 25, DMG_GENERIC );
+			TakeHealth( 100, DMG_GENERIC );
 		}
 		
 		gEvilImpulse101		= false;
@@ -7715,7 +7715,7 @@ void CRevertSaved::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 	SetNextThink( gpGlobals->curtime + LoadTime() );
 	SetThink( &CRevertSaved::LoadThink );
 
-	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
+	/*CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
 
 	if ( pPlayer )
 	{
@@ -7726,7 +7726,7 @@ void CRevertSaved::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE 
 		// clear any pending autosavedangerous
 		g_ServerGameDLL.m_fAutoSaveDangerousTime = 0.0f;
 		g_ServerGameDLL.m_fAutoSaveDangerousMinHealthToCommit = 0.0f;
-	}
+	}*/
 }
 
 void CRevertSaved::InputReload( inputdata_t &inputdata )
@@ -7741,6 +7741,7 @@ void CRevertSaved::InputReload( inputdata_t &inputdata )
 	SetThink( &CRevertSaved::LoadThink );
 #endif
 
+    /*
 	CBasePlayer *pPlayer = UTIL_GetLocalPlayer();
 
 	if ( pPlayer )
@@ -7752,7 +7753,7 @@ void CRevertSaved::InputReload( inputdata_t &inputdata )
 		// clear any pending autosavedangerous
 		g_ServerGameDLL.m_fAutoSaveDangerousTime = 0.0f;
 		g_ServerGameDLL.m_fAutoSaveDangerousMinHealthToCommit = 0.0f;
-	}
+	}*/
 }
 
 #ifdef HL1_DLL
@@ -7773,6 +7774,9 @@ void CRevertSaved::MessageThink( void )
 
 void CRevertSaved::LoadThink( void )
 {
+    engine->ServerCommand( UTIL_VarArgs("changelevel %s\n", gpGlobals->mapname) );
+    return;
+
 	if ( !gpGlobals->deathmatch )
 	{
 		engine->ServerCommand("reload\n");

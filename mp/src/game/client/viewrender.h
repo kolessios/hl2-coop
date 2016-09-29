@@ -360,6 +360,7 @@ public:
 
 	// Render functions
 	virtual	void	Render( vrect_t *rect );
+    void	DrawScope( const CViewSetup &cameraView );
 	virtual void	RenderView( const CViewSetup &view, int nClearFlags, int whatToDraw );
 	virtual void	RenderPlayerSprites();
 	virtual void	Render2DEffectsPreHUD( const CViewSetup &view );

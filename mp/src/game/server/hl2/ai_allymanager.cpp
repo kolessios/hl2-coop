@@ -124,13 +124,16 @@ void CAI_AllyManager::CountAllies( int *pTotal, int *pMedics )
 {
 	(*pTotal) = (*pMedics) = 0;
 
-	if ( !AI_IsSinglePlayer() )
+	/*if ( !AI_IsSinglePlayer() )
 	{
 		// @TODO (toml 10-22-04): no MP support right now
 		return;
-	}
+	}*/
 
-	const Vector &	vPlayerPos = UTIL_GetLocalPlayer()->GetAbsOrigin();
+    if ( !UTIL_GetIdealPlayer() )
+        return;
+
+	const Vector &	vPlayerPos = UTIL_GetIdealPlayer()->GetAbsOrigin();
 	CAI_BaseNPC **	ppAIs 	= g_AI_Manager.AccessAIs();
 	int 			nAIs 	= g_AI_Manager.NumAIs();
 
@@ -147,7 +150,7 @@ void CAI_AllyManager::CountAllies( int *pTotal, int *pMedics )
 				continue;
 			
 			// They only count if I can use them.
-			if( ppAIs[i]->IRelationType( UTIL_GetLocalPlayer() ) != D_LI )
+			if( ppAIs[i]->IRelationType( UTIL_GetIdealPlayer() ) != D_LI )
 				continue;
 
 			// Skip distant NPCs

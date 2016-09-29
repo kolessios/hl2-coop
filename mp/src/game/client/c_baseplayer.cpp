@@ -1235,11 +1235,28 @@ void C_BasePlayer::UpdateFlashlight()
 			m_pFlashlight->TurnOn();
 		}
 
-		Vector vecForward, vecRight, vecUp;
-		EyeVectors( &vecForward, &vecRight, &vecUp );
+        if ( IsLocalPlayer() && input->CAM_IsThirdPerson() )
+        {
+            Vector vecOrigin;
+			QAngle eyeAngles = EyeAngles();
 
-		// Update the light with the new position and direction.		
-		m_pFlashlight->UpdateLight( EyePosition(), vecForward, vecRight, vecUp, FLASHLIGHT_DISTANCE );
+            int iAttachment = LookupAttachment( "anim_attachment_LH" );
+            GetAttachment( iAttachment, vecOrigin, eyeAngles );
+
+            Vector vecForward, vecRight, vecUp;
+			AngleVectors( EyeAngles(), &vecForward, &vecRight, &vecUp );
+
+            // Update the light with the new position and direction.		
+		    m_pFlashlight->UpdateLight( vecOrigin, vecForward, vecRight, vecUp, FLASHLIGHT_DISTANCE );
+        }
+        else
+        {
+            Vector vecForward, vecRight, vecUp;
+		    EyeVectors( &vecForward, &vecRight, &vecUp );
+
+		    // Update the light with the new position and direction.		
+		    m_pFlashlight->UpdateLight( EyePosition(), vecForward, vecRight, vecUp, FLASHLIGHT_DISTANCE );
+        }
 	}
 	else if (m_pFlashlight)
 	{

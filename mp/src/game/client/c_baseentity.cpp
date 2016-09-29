@@ -2973,6 +2973,8 @@ void C_BaseEntity::CreateLightEffects( void )
 		dl->radius = random->RandomFloat(400,431);
 		dl->die = gpGlobals->curtime + 0.001;
 	}
+    EF_DIMLIGHT;
+    /*
 	if (IsEffectActive(EF_DIMLIGHT))
 	{			
 		dl = effects->CL_AllocDlight ( index );
@@ -2980,7 +2982,7 @@ void C_BaseEntity::CreateLightEffects( void )
 		dl->color.r = dl->color.g = dl->color.b = 100;
 		dl->radius = random->RandomFloat(200,231);
 		dl->die = gpGlobals->curtime + 0.001;
-	}
+	}*/
 }
 
 void C_BaseEntity::MoveToLastReceivedPosition( bool force )
